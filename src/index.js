@@ -4,10 +4,9 @@ import './index.css';
 
  function Square(props){
     return (
-      <button className="square" onClick={props.onClick}>
+      <button className={props.hightLight ? "square highlightText" : "square"} onClick={props.onClick}>
         {props.value}
-      </button>
-    );
+      </button>);
 }
 
 
@@ -29,7 +28,7 @@ function caclculateWinner(squares) {
   for (let i=0; i < lines.length; i++) {
   const [a, b, c] = lines[i];
   if(squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-    return squares[a];
+    return {winner: squares[a], line:[a,b,c]};
     }
   }
   return null;
@@ -38,37 +37,31 @@ function caclculateWinner(squares) {
 class Board extends React.Component {
   
   renderSquare(i) {
-    if(caclculateWinner)
-    return <Square value={this.props.squares[i]} onClick={() => this.props.onClick(i)}/>;
+       return (<Square  key={i} value={this.props.squares[i]} onClick={() => this.props.onClick(i)} hightLight={this.hightLightChess(i)}/>); 
   }
-
+  
+  hightLightChess = (i) => {
+    if(this.props.hightLight && (i === this.props.hightLight.line[0] || i === this.props.hightLight.line[1] || i === this.props.hightLight.line[2])){
+       return true;
+ }
+  }
+ 
+  renderRows (){
+    let row=[];
+    for(let i = 0; i < 4;i++){
+      let rows=[];
+      for(let j = 0; j <4;j++){
+        rows.push(this.renderSquare(i*4+j));
+      }
+      row.push(<div className="board-row" key={i}>{rows}</div>);
+    }
+    return row;
+  }
+  
   render() {
     return (
       <div>
-        <div className="board-row">
-          {this.renderSquare(0)}
-          {this.renderSquare(1)}
-          {this.renderSquare(2)}
-          {this.renderSquare(3)}          
-        </div>
-        <div className="board-row">
-          {this.renderSquare(4)}
-          {this.renderSquare(5)}
-          {this.renderSquare(6)}
-          {this.renderSquare(7)}
-        </div>
-        <div className="board-row">
-          {this.renderSquare(8)}
-          {this.renderSquare(9)}
-          {this.renderSquare(10)}
-          {this.renderSquare(11)}
-        </div>
-        <div className="board-row">
-          {this.renderSquare(12)}
-          {this.renderSquare(13)}
-          {this.renderSquare(14)}
-          {this.renderSquare(15)}
-        </div>
+        {this.renderRows()}
       </div>
     );
   }
@@ -81,6 +74,7 @@ class Game extends React.Component {
     this.state = {
       history: [{
         squares: Array(16).fill(null),
+        lastStep: 'Game Start',
       }],
       xIsNext: true,
       stepNumber: 0,
@@ -100,9 +94,11 @@ class Game extends React.Component {
     const squares = current.squares.slice();
     if(caclculateWinner(squares) || squares[i]) return;
     squares[i] = this.state.xIsNext ? 'X' : 'O';
+    const desc =  squares[i]+'  Move #(' + (Math.floor(i/4)+1)+','+i%4+')';
     this.setState({
         history: history.concat([{      
         squares: squares, 
+        lastStep: desc
       }]),
         xIsNext: !this.state.xIsNext,
         stepNumber: history.length,
@@ -115,17 +111,16 @@ class Game extends React.Component {
     const current = history[this.state.stepNumber];
     const winner = caclculateWinner(current.squares);
     const moves = history.map((step, move) => {
-      const desc = move ? 'Move #' + move : "Game Start";
       return (
         <li key={move}>
-          <a href='#' className={this.state.stepNumber == move ? 'highlightText' : null} onClick={() => this.jumpTo(move)}>{desc}</a>
+          <a href='#' className={this.state.stepNumber == move ? 'highlightText' : null} onClick={() => this.jumpTo(move)}>{step.lastStep}</a>
         </li>
       );
     });
     
     let status;
     if (winner) {
-      status = 'Winner: ' + winner;
+      status = 'Winner: ' + winner.winner;
     } else {
       status = 'Next player: ' + (this.state.xIsNext ? 'X' : 'O');
     }
@@ -133,7 +128,7 @@ class Game extends React.Component {
     return (
       <div className="game">
         <div className="game-board">
-          <Board  squares={current.squares} onClick={(i) => this.handleClick(i)}/>
+          <Board squares={current.squares} onClick={(i) => this.handleClick(i)} hightLight={winner}/>
         </div>
         <div className="game-info">
           <div>{status}</div>
